@@ -11,21 +11,14 @@ def new_map(num_elements, load_factor, prime=109345121):
     table = lt.new_list()
     
     for _ in range(capacity):
-        lt.add_last()
-        
+        lt.add_last(table, me.new_map_entry(None, None))
 
     tabla ={
         'prime': prime,
         'capacity': capacity,
-        'scale': 1,
-        'shift': 0,
-        'table': {
-            'size': 11,
-            'elements': [
-                {'key': None},
-                {'key': None},
-                ]
-        },
+        'scale': random.randint(1, prime - 1),
+        'shift': random.randint(0, prime - 1),
+        'table': table,
         'current_factor': 0,
         'limit_factor': load_factor,
         'size': 0
