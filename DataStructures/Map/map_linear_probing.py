@@ -93,8 +93,10 @@ def put(my_map, key, value):
         my_map['size'] += 1
         my_map['current_factor'] = my_map['size'] / my_map['capacity']
         
-    if my_map['current_factor'] > my_map['limit_fator']:
+    if my_map['current_factor'] > my_map['limit_factor']:
         my_map = rehash(my_map)
+        
+    return my_map
         
 def contains(my_map, key):
     hash_v = mf.hash_value(my_map, key)
@@ -125,3 +127,33 @@ def remove(my_map, key):
 
 def size(my_map):
     return my_map['size']
+
+def is_empty(my_map):
+    return my_map['size'] == 0
+
+def key_set(my_map):
+    
+    lista = lt.new_list()
+    
+    table = my_map['table']
+    
+    for pos in range(my_map['capacity']):
+        entry = lt.get_element(table, pos)
+        key = me.get_key(entry)
+        if key is not None and key != '__EMPTY__':
+            lt.add_last(lista, key)
+                
+    return lista
+
+def value_set(my_map):
+    
+    lista = lt.new_list()
+    table = my_map['table']
+    
+    for pos in range(my_map['capacity']):
+        entry = lt.get_element(table, pos)
+        key = me.get_key(entry)
+        if key is not None and key != '__EMPTY__':
+            lt.add_last(lista, me.get_value(entry))
+
+    return lista
