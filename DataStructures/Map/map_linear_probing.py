@@ -26,3 +26,4 @@ def new_map(num_elements, load_factor, prime=109345121):
     
     return tabla
 
+
