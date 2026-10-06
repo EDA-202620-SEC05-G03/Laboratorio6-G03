@@ -30,9 +30,9 @@ import time
 import tracemalloc
 
 
-# TODO Realice la importación del mapa linear probing
-# TODO Realice la importación de ArrayList como estructura de datos auxiliar para sus requerimientos
-# TODO Realice la importación del mapa separate chaining
+from DataStructures.Map import map_linear_probing as lp
+from DataStructures.List import array_list as al
+from DataStructures.Map import map_separate_chaining as sp
 
 
 data_dir = os.path.dirname(os.path.realpath('__file__')) + '/Data/GoodReads/'
@@ -43,6 +43,10 @@ def new_logic():
     los libros y utiliza tablas de hash para almacenar los datos restantes con diferentes índices
     utilizando linear probing como tipo de tabla de hash
     """
+    
+    num_elements = 1000
+    load_factor = 0.7
+    
     catalog = {"books": None,
                "books_by_id": None,
                "books_by_year_author":None,
@@ -53,22 +57,21 @@ def new_logic():
     #Lista que contiene la totalidad de los libros cargados
     catalog['books'] = al.new_list()
 
-    #Tabla de Hash que contiene los libros indexados por good_reads_book_id  
-    #(good_read_id -> book)
-    catalog['books_by_id'] = None #TODO completar la creación del mapa
+    #Tabla de Hash que contiene los libros indexados por good_reads_book_id: (good_read_id -> book)
+    catalog['books_by_id'] = lp.new_map(num_elements, load_factor)
 
     #Tabla de Hash con la siguiente pareja llave valor: (author_name -> List(books))
-    catalog['books_by_authors'] = None #TODO completar la creación del mapa
-
+    catalog['books_by_authors'] = lp.new_map(num_elements, load_factor)
+    
     #Tabla de Hash con la siguiente pareja llave valor: (tag_name -> tag)
-    catalog['tags'] = None #TODO completar la creación del mapa
+    catalog['tags'] = lp.new_map(num_elements, load_factor)
 
     #Tabla de Hash con la siguiente pareja llave valor: (tag_id -> book_tags)
-    catalog['book_tags'] = lp.new_map(1000,0.7)
+    catalog['book_tags'] = lp.new_map(num_elements, load_factor)
 
     #Tabla de Hash principal que contiene sub-mapas dentro de los valores
     #con la siguiente representación de la pareja llave valor: (author_name -> (original_publication_year -> list(books)))
-    catalog['books_by_year_author'] = None #TODO completar la creación del mapa
+    catalog['books_by_year_author'] = lp.new_map(num_elements, load_factor)
     
     return catalog
 
@@ -91,7 +94,7 @@ def load_data(catalog):
 def load_books(catalog):
     """
     Carga los libros del archivo.  Por cada libro se toman sus autores y por
-    cada uno de ellos, se crea en la lista de autores, a dicho autor y una
+    cada uno de ellos, se crea en lz|a lista de autores, a dicho autor y una
     referencia al libro que se esta procesando.
     """
     booksfile = data_dir + "books.csv"
@@ -209,7 +212,9 @@ def add_book_author_and_year(catalog, author_name, book):
             pub_year_map = lp.new_map(1000,0.7)
             lp.put(pub_year_map,pub_year,book)
     else:
-        pass # TODO Completar escenario donde no se había agregado el autor al mapa principal
+        # TODO Completar escenario donde no se había agregado el autor al mapa principal
+        
+        
     return catalog
 
 
