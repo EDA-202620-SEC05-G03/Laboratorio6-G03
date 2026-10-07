@@ -79,6 +79,8 @@ def delete_element(my_list, pos):
     return my_list
 
 def insert_element(my_list, element, pos):
+    if pos < 0 or pos > size(my_list):
+        raise Exception('IndexError: list index out of range')
     my_list["elements"].insert(pos, element)
     my_list["size"] += 1
     return my_list
