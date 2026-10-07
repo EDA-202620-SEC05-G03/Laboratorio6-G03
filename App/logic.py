@@ -34,6 +34,11 @@ from DataStructures.Map import map_linear_probing as lp
 from DataStructures.List import array_list as al
 from DataStructures.Map import map_separate_chaining as sc
 
+# ===== CONFIGURACIÓN DE PRUEBAS =====
+mp = lp                # lp = PROBING   |  sc = CHAINING
+LOAD_FACTOR = 0.7      # PROBING: 0.1, 0.5, 0.7, 0.9  |  CHAINING: 2, 4, 6, 8
+MEDIR_MEMORIA = False  # True = mide memoria (kB)  |  False = mide tiempo real (ms)
+
 
 data_dir = os.path.dirname(os.path.realpath('__file__')) + '/Data/GoodReads/'
 
@@ -43,9 +48,6 @@ def new_logic():
     los libros y utiliza tablas de hash para almacenar los datos restantes con diferentes índices
     utilizando linear probing como tipo de tabla de hash
     """
-    
-    num_elements = 1000
-    load_factor = 0.7
     
     catalog = {"books": None,
                "books_by_id": None,
@@ -59,20 +61,20 @@ def new_logic():
     
     #Tabla de Hash que contiene los libros indexados por good_reads_book_id  
     #(good_read_id -> book)
-    catalog['books_by_id'] = lp.new_map(10000, 0.7) 
+    catalog['books_by_id'] = mp.new_map(10000, LOAD_FACTOR) 
 
     #Tabla de Hash con la siguiente pareja llave valor: (author_name -> List(books))
-    catalog['books_by_authors'] = lp.new_map(50007, 0.7) 
+    catalog['books_by_authors'] = mp.new_map(50007, LOAD_FACTOR) 
 
     #Tabla de Hash con la siguiente pareja llave valor: (tag_name -> tag)
-    catalog['tags'] = lp.new_map(35000, 0.7) 
+    catalog['tags'] = mp.new_map(35000, LOAD_FACTOR) 
 
     #Tabla de Hash con la siguiente pareja llave valor: (tag_id -> book_tags)
-    catalog['book_tags'] = lp.new_map(num_elements, load_factor)
+    catalog['book_tags'] = mp.new_map(1000, LOAD_FACTOR)
 
     #Tabla de Hash principal que contiene sub-mapas dentro de los valores
     #con la siguiente representación de la pareja llave valor: (author_name -> (original_publication_year -> list(books)))
-    catalog['books_by_year_author'] = lp.new_map(5000, 0.7) 
+    catalog['books_by_year_author'] = mp.new_map(5000, LOAD_FACTOR) 
     
     return catalog
 
@@ -80,25 +82,28 @@ def new_logic():
 # Funciones para la carga de datos
 #  -------------------------------------------------------------
 
-#TODO incorporar las funciones para toma de tiempo y memoria
 def load_data(catalog):
     """
     Carga los datos de los archivos y cargar los datos en la
     estructura de datos
     """
+    if MEDIR_MEMORIA:
+        tracemalloc.start()
+        start_memory = getMemory()
     start_time = getTime()
-    tracemalloc.start()
-    start_memory = getMemory()
 
     books, authors = load_books(catalog)
     tag_size = load_tags(catalog)
     book_tag_size = load_books_tags(catalog)
 
-    stop_memory = getMemory()
-    tracemalloc.stop()
     end_time = getTime()
     tiempo = deltaTime(end_time, start_time)
-    memoria = deltaMemory(start_memory, stop_memory)
+    memoria = 0.0
+    if MEDIR_MEMORIA:
+        stop_memory = getMemory()
+        tracemalloc.stop()
+        memoria = deltaMemory(start_memory, stop_memory)
+
     return books, authors, tag_size, book_tag_size, tiempo, memoria
 
 
@@ -167,7 +172,7 @@ def add_book(catalog, book):
     # Se adiciona el libro a la lista general de libros
     al.add_last(catalog['books'], book)
     # Se adiciona el libro a la tabla de hash indexada por goodreads_book_id
-    lp.put(catalog['books_by_id'],book['goodreads_book_id'], book)
+    mp.put(catalog['books_by_id'],book['goodreads_book_id'], book)
     # Se obtienen los autores del libro
     authors = book['authors'].split(",")
     # Para cada autor, se agrega en la tabla de hash indexada por autores y 
@@ -184,7 +189,7 @@ def add_book_author(catalog, author_name, book):
     a los libros de dicho autor
     """
     authors = catalog['books_by_authors']
-    author_value = lp.get(authors,author_name)
+    author_value = mp.get(authors,author_name)
     if author_value:
         #Si el autor ya se había agregado al mapa, se obtiene la lista que contiene sus libros y se agrega el nuevo elemento.
         al.add_last(author_value,book)
@@ -193,7 +198,7 @@ def add_book_author(catalog, author_name, book):
         # y como valor una lista que contiene los libros asociados al autor.
         authors_books = al.new_list()
         al.add_last(authors_books,book)
-        lp.put(authors,author_name,authors_books)
+        mp.put(authors,author_name,authors_books)
     return catalog
 
 def format_year(pub_year):
@@ -217,21 +222,21 @@ def add_book_author_and_year(catalog, author_name, book):
     """
     books_by_year_author = catalog['books_by_year_author']
     pub_year = format_year(book['original_publication_year'])
-    author_value = lp.get(books_by_year_author, author_name)
+    author_value = mp.get(books_by_year_author, author_name)
     if author_value:
-        pub_year_value = lp.get(author_value, pub_year)
+        pub_year_value = mp.get(author_value, pub_year)
         if pub_year_value:
             al.add_last(pub_year_value, book)
         else:
             books = al.new_list()
             al.add_last(books, book)
-            lp.put(author_value, pub_year, books)
+            mp.put(author_value, pub_year, books)
     else:
         books = al.new_list()
         al.add_last(books, book)
-        pub_year_map = lp.new_map(20, 0.7)
-        lp.put(pub_year_map, pub_year, books)
-        lp.put(books_by_year_author, author_name, pub_year_map)
+        pub_year_map = mp.new_map(20, LOAD_FACTOR)
+        mp.put(pub_year_map, pub_year, books)
+        mp.put(books_by_year_author, author_name, pub_year_map)
     return catalog
 
 
@@ -240,7 +245,7 @@ def add_tag(catalog, tag):
     Adiciona un tag al mapa de tags indexado por nombre del tag
     """
     t = new_tag(tag['tag_name'], tag['tag_id'])
-    lp.put(catalog['tags'],tag['tag_name'],t)
+    mp.put(catalog['tags'],tag['tag_name'],t)
     return catalog
 
 
@@ -253,14 +258,14 @@ def add_book_tag(catalog, book_tag):
         - Se crea el nuevo indice en el mapa y como valor se agrega una nueva lista con el book_tag asociado.
     """
     t = new_book_tag(book_tag['tag_id'], book_tag['goodreads_book_id'], book_tag['count'])
-    book_tag_value = lp.contains(catalog['book_tags'], t['tag_id'])
+    book_tag_value = mp.contains(catalog['book_tags'], t['tag_id'])
     if book_tag_value:
-        book_tag_list = lp.get(catalog['book_tags'], t['tag_id'])
+        book_tag_list = mp.get(catalog['book_tags'], t['tag_id'])
         al.add_last(book_tag_list, t)
     else:
         book_tag_list = al.new_list()
         al.add_last(book_tag_list, t)
-        lp.put(catalog['book_tags'], t['tag_id'], book_tag_list)
+        mp.put(catalog['book_tags'], t['tag_id'], book_tag_list)
     return catalog
 
 #  -------------------------------------------------------------
@@ -271,14 +276,14 @@ def get_book_info_by_book_id(catalog, good_reads_book_id):
     """
     Retorna toda la informacion que se tenga almacenada de un libro según su good_reads_id.
     """
-    return lp.get(catalog['books_by_id'], str(good_reads_book_id))
+    return mp.get(catalog['books_by_id'], str(good_reads_book_id))
 
 
 def get_books_by_author(catalog, author_name):
     """
     Retorna los libros asociado al autor ingresado por párametro
     """
-    return lp.get(catalog['books_by_authors'], author_name.strip())
+    return mp.get(catalog['books_by_authors'], author_name.strip())
 
 
 def get_books_by_tag(catalog, tag_name):
@@ -292,15 +297,15 @@ def get_books_by_tag(catalog, tag_name):
 
     """
     books = al.new_list()
-    tag = lp.get(catalog['tags'], tag_name.strip())
+    tag = mp.get(catalog['tags'], tag_name.strip())
     if tag is None:
         return books
-    book_tag_list = lp.get(catalog['book_tags'], tag['tag_id'])
+    book_tag_list = mp.get(catalog['book_tags'], tag['tag_id'])
     if book_tag_list is None:
         return books
     for i in range(al.size(book_tag_list)):
         book_tag = al.get_element(book_tag_list, i)
-        book = lp.get(catalog['books_by_id'], book_tag['book_id'])
+        book = mp.get(catalog['books_by_id'], book_tag['book_id'])
         if book is not None:
             al.add_last(books, book)
     return books
@@ -320,9 +325,9 @@ def get_books_by_author_pub_year(catalog, author_name, pub_year):
     start_memory = getMemory()
     
     resultado = None
-    author_map = lp.get(catalog['books_by_year_author'], author_name.strip())
+    author_map = mp.get(catalog['books_by_year_author'], author_name.strip())
     if author_map is not None:
-        resultado = lp.get(author_map, format_year(pub_year))
+        resultado = mp.get(author_map, format_year(pub_year))
     
     # Detener medición de memoria
     stop_memory = getMemory()
@@ -341,19 +346,19 @@ def get_books_by_author_pub_year(catalog, author_name, pub_year):
 #  -------------------------------------------------------------
 
 def book_size(catalog):
-    return lp.size(catalog['books_by_id'])
+    return mp.size(catalog['books_by_id'])
 
 
 def author_size(catalog):
-    return lp.size(catalog['books_by_authors'])
+    return mp.size(catalog['books_by_authors'])
 
 
 def tag_size(catalog):
-    return lp.size(catalog['tags'])
+    return mp.size(catalog['tags'])
 
 
 def book_tag_size(catalog):
-    return lp.size(catalog['book_tags'])
+    return mp.size(catalog['book_tags'])
 
 #  -------------------------------------------------------------
 # Funciones utilizadas para obtener memoria y tiempo
